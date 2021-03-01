@@ -118,6 +118,52 @@ public class PuzzleActivity extends AppCompatActivity {
         int rows = 4;
         int cols = 4;
 
+        //Random
+        ArrayList<Integer> randomNumber = new ArrayList<>();
+        randomNumber.add(1);
+        randomNumber.add(-1);
+        ArrayList<ArrayList<Piece>> listRandom = new ArrayList(rows);
+        for (int row = 0; row < rows; row++) {
+            ArrayList<Piece> listPiece = new ArrayList<>();
+            for (int col = 0; col < cols; col++) {
+                //Row = 0
+                Piece piece = new Piece();
+                if (row == 0) {
+                    piece.top = 0;
+                }
+                if (row == rows - 1) {
+                    piece.bottom = 0;
+                }
+                if (col == 0) {
+                    piece.left = 0;
+                }
+                if (col == cols - 1) {
+                    piece.right = 0;
+                }
+                if (row - 1 >= 0) {
+                    piece.top = -listRandom.get(row - 1).get(col).bottom;
+                }
+                if (col - 1 >= 0) {
+                    piece.left = -listPiece.get(col - 1).right;
+                }
+                if (piece.right == 0 && col != cols - 1) {
+                    Collections.shuffle(randomNumber);
+                    piece.right = randomNumber.get(0);
+                }
+                if (piece.bottom == 0 && row != rows - 1) {
+                    Collections.shuffle(randomNumber);
+                    piece.bottom = randomNumber.get(0);
+                }
+                listPiece.add(piece);
+            }
+            listRandom.add(listPiece);
+        }
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < cols; col++) {
+                Log.d("myLog", "left: " + listRandom.get(row).get(col).left + " top: " + listRandom.get(row).get(col).top + " right: " + listRandom.get(row).get(col).right + " bottom: " + listRandom.get(row).get(col).bottom);
+            }
+        }
+
         ImageView imageView = findViewById(R.id.imageView);
         ArrayList<PuzzlePiece> pieces = new ArrayList<>(piecesNumber);
 
@@ -160,10 +206,10 @@ public class PuzzleActivity extends AppCompatActivity {
 
                 // apply the offset to each piece
                 Bitmap pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
-                Log.d("myLog", "x: " + (xCoord - offsetX));
-                Log.d("myLog", "y: " + (yCoord - offsetY));
-                Log.d("myLog", "width: " + (pieceWidth + offsetX));
-                Log.d("myLog", "height: " + (pieceHeight + offsetY));
+//                Log.d("myLog", "x: " + (xCoord - offsetX));
+//                Log.d("myLog", "y: " + (yCoord - offsetY));
+//                Log.d("myLog", "width: " + (pieceWidth + offsetX));
+//                Log.d("myLog", "height: " + (pieceHeight + offsetY));
                 PuzzlePiece piece = new PuzzlePiece(getApplicationContext());
                 piece.setImageBitmap(pieceBitmap);
                 piece.xCoord = xCoord - offsetX + imageView.getLeft();
@@ -195,7 +241,7 @@ public class PuzzleActivity extends AppCompatActivity {
                 } else {
                     // right bump
                     path.lineTo(pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
-                    path.cubicTo(pieceBitmap.getWidth() - bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, pieceBitmap.getWidth() - bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
+                    path.cubicTo(pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
                     path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
                 }
 
@@ -215,21 +261,19 @@ public class PuzzleActivity extends AppCompatActivity {
                 } else {
                     // left bump
                     path.lineTo(offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
-                    path.cubicTo(offsetX - bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, offsetX - bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
+                    path.cubicTo(offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
                     path.close();
                 }
                 // mask the piece
                 Paint paint = new Paint();
                 paint.setColor(0XFF000000);
                 paint.setStyle(Paint.Style.FILL);
-                paint.setStrokeJoin(Paint.Join.ROUND);
-                paint.setStrokeCap(Paint.Cap.ROUND);
 
                 canvas.drawPath(path, paint);
                 paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
                 canvas.drawBitmap(pieceBitmap, 0, 0, paint);
 
-                path.offset(xCoord - offsetX,yCoord - offsetY);
+                path.offset(xCoord - offsetX, yCoord - offsetY);
                 paths.add(path);
 
 //                // draw a white border
