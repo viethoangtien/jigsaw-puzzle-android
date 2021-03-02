@@ -18,7 +18,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -121,47 +120,6 @@ public class PuzzleActivity extends AppCompatActivity {
         int rows = 4;
         int cols = 4;
 
-        //Random position
-        ArrayList<Integer> randomNumber = new ArrayList<>();
-        randomNumber.add(IN);
-        randomNumber.add(OUT);
-        ArrayList<ArrayList<Piece>> listRandom = new ArrayList(rows);
-        for (int row = 0; row < rows; row++) {
-            ArrayList<Piece> listPiece = new ArrayList<>();
-            for (int col = 0; col < cols; col++) {
-                //Row = 0
-                Piece piece = new Piece();
-                if (row == 0) {
-                    piece.top = EQUAL;
-                }
-                if (row == rows - 1) {
-                    piece.bottom = EQUAL;
-                }
-                if (col == 0) {
-                    piece.left = EQUAL;
-                }
-                if (col == cols - 1) {
-                    piece.right = EQUAL;
-                }
-                if (row - 1 >= 0) {
-                    piece.top = -listRandom.get(row - 1).get(col).bottom;
-                }
-                if (col - 1 >= 0) {
-                    piece.left = -listPiece.get(col - 1).right;
-                }
-                if (piece.right == 0 && col != cols - 1) {
-                    Collections.shuffle(randomNumber);
-                    piece.right = randomNumber.get(0);
-                }
-                if (piece.bottom == 0 && row != rows - 1) {
-                    Collections.shuffle(randomNumber);
-                    piece.bottom = randomNumber.get(0);
-                }
-                listPiece.add(piece);
-            }
-            listRandom.add(listPiece);
-        }
-
         ImageView imageView = findViewById(R.id.imageView);
         ArrayList<PuzzlePiece> pieces = new ArrayList<>(piecesNumber);
 
@@ -185,14 +143,51 @@ public class PuzzleActivity extends AppCompatActivity {
         int pieceWidth = croppedImageWidth / cols;
         int pieceHeight = croppedImageHeight / rows;
 
+        //Random position
+        ArrayList<Integer> randomNumber = new ArrayList<>();
+        randomNumber.add(IN);
+        randomNumber.add(OUT);
+
         // Create each bitmap piece and add it to the resulting array
         int yCoord = 0;
         ArrayList<Path> paths = new ArrayList<>();
         paths.clear();
+        ArrayList<ArrayList<Piece>> listRandom = new ArrayList(rows);
         for (int row = 0; row < rows; row++) {
+            ArrayList<Piece> listPiece = new ArrayList<>();
             int xCoord = 0;
             for (int col = 0; col < cols; col++) {
-                // calculate offset for each piece
+                //RANDOM
+                Piece pieceRandom = new Piece();
+                if (row == 0) {
+                    pieceRandom.top = EQUAL;
+                }
+                if (row == rows - 1) {
+                    pieceRandom.bottom = EQUAL;
+                }
+                if (col == 0) {
+                    pieceRandom.left = EQUAL;
+                }
+                if (col == cols - 1) {
+                    pieceRandom.right = EQUAL;
+                }
+                if (row - 1 >= 0) {
+                    pieceRandom.top = -listRandom.get(row - 1).get(col).bottom;
+                }
+                if (col - 1 >= 0) {
+                    pieceRandom.left = -listPiece.get(col - 1).right;
+                }
+                if (pieceRandom.right == 0 && col != cols - 1) {
+                    Collections.shuffle(randomNumber);
+                    pieceRandom.right = randomNumber.get(0);
+                }
+                if (pieceRandom.bottom == 0 && row != rows - 1) {
+                    Collections.shuffle(randomNumber);
+                    pieceRandom.bottom = randomNumber.get(0);
+                }
+                listPiece.add(pieceRandom);
+
+                //CUTTING
                 int offsetX = pieceWidth / 3;
                 int offsetY = pieceHeight / 3;
 //                if (col > 0) {
@@ -204,17 +199,15 @@ public class PuzzleActivity extends AppCompatActivity {
 
                 // this bitmap will hold our final puzzle piece image
                 Bitmap puzzlePiece;
-                if (row > 0 && col > 0 && row < rows - 1 && col < cols - 1) {
-                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX * 2, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
+                if (row == 0 || col == 0) {
+
                 } else {
-                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
+
                 }
-                // draw path
-                float bumpSize = pieceHeight * 1.0f / 2.5f;
-                Canvas canvas = new Canvas(puzzlePiece);
                 Path path = new Path();
 
                 // apply the offset to each piece
+                // pieceBitmap using draw image to a piece, crop by path
                 Bitmap pieceBitmap;
                 int offsetPathX;
                 int offsetPathY;
@@ -223,57 +216,60 @@ public class PuzzleActivity extends AppCompatActivity {
                     offsetPathX = xCoord;
                     offsetPathY = yCoord;
                     path.moveTo(0, 0);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
                 } else if ((row == 0) && (col == cols - 1)) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord, pieceWidth + offsetX, pieceHeight + offsetY);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord;
                     path.moveTo(offsetX, 0);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
                 } else if (row == rows - 1 && col == 0) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
                     offsetPathX = xCoord;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(0, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
                 } else if ((row == rows - 1) && (col == cols - 1)) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(offsetX, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
                 } else if (row == 0) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord, pieceWidth + offsetX * 2, pieceHeight + offsetY);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord;
                     path.moveTo(offsetX, 0);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX * 2, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
                 } else if (col == 0) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY * 2);
                     offsetPathX = xCoord;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(0, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
                 } else if (row == rows - 1) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX * 2, pieceHeight + offsetY);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(offsetX, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX * 2, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
                 } else if (col == cols - 1) {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY * 2);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(offsetX, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
                 } else {
                     pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX * 2, pieceHeight + offsetY * 2);
                     offsetPathX = xCoord - offsetX;
                     offsetPathY = yCoord - offsetY;
                     path.moveTo(offsetX, offsetY);
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX * 2, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
                 }
-//                Log.d("myLog", "x: " + (xCoord - offsetX));
-//                Log.d("myLog", "y: " + (yCoord - offsetY));
-//                Log.d("myLog", "width: " + (pieceWidth + offsetX));
-//                Log.d("myLog", "height: " + (pieceHeight + offsetY));
 
-                int top = listRandom.get(row).get(col).top;
-                int right = listRandom.get(row).get(col).right;
-                int bottom = listRandom.get(row).get(col).bottom;
-                int left = listRandom.get(row).get(col).left;
-                Log.d("myLog", "left: " + listRandom.get(row).get(col).left + " top: " + listRandom.get(row).get(col).top + " right: " + listRandom.get(row).get(col).right + " bottom: " + listRandom.get(row).get(col).bottom);
+                // Canvas using draw image piece
+                float bumpSize = pieceHeight * 1.0f / 2.5f;
+                Canvas canvas = new Canvas(puzzlePiece);
 
                 int cuttingBitmapWidth = pieceWidth;
                 int cuttingBitmapHeight = pieceHeight;
@@ -292,102 +288,63 @@ public class PuzzleActivity extends AppCompatActivity {
                     cuttingBitmapWidth = pieceWidth + offsetX;
                 }
                 //TOP
-                if (top == EQUAL) {
-                    path.lineTo(cuttingBitmapWidth, 0);
-                } else if (top == IN) {
+                if (pieceRandom.top == EQUAL) {
+                    path.lineTo(cuttingBitmapWidth, offsetY);
+                } else if (pieceRandom.top == IN) {
                     path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3, offsetY);
                     path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6, offsetY + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, offsetY + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, offsetY);
                     path.lineTo(cuttingBitmapWidth, offsetY);
-                } else if (top == OUT) {
+                } else if (pieceRandom.top == OUT) {
                     path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3, offsetY);
                     path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6, offsetY - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, offsetY - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, offsetY);
                     path.lineTo(cuttingBitmapWidth, offsetY);
                 }
 
                 //RIGHT
-                if (right == EQUAL) {
+                if (pieceRandom.right == EQUAL) {
                     path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
-                } else if (right == IN) {
+                } else if (pieceRandom.right == IN) {
                     path.lineTo(cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3);
                     path.cubicTo(cuttingBitmapWidth - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, cuttingBitmapWidth - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
                     path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
-                } else if (right == OUT) {
+                } else if (pieceRandom.right == OUT) {
                     path.lineTo(cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3);
                     path.cubicTo(cuttingBitmapWidth + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, cuttingBitmapWidth + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
                     path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
                 }
 
                 //BOTTOM
-                if (bottom == EQUAL) {
+                if (pieceRandom.bottom == EQUAL) {
                     path.lineTo(offsetX, cuttingBitmapHeight);
-                } else if (bottom == IN) {
+                } else if (pieceRandom.bottom == IN) {
                     path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, cuttingBitmapHeight);
                     path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, cuttingBitmapHeight - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6, cuttingBitmapHeight - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3, cuttingBitmapHeight);
                     path.lineTo(offsetX, cuttingBitmapHeight);
-                } else if (bottom == OUT) {
+                } else if (pieceRandom.bottom == OUT) {
                     path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, cuttingBitmapHeight);
                     path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, cuttingBitmapHeight + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6, cuttingBitmapHeight + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3, cuttingBitmapHeight);
                     path.lineTo(offsetX, cuttingBitmapHeight);
                 }
                 //LEFT
-                if (left == EQUAL) {
+                if (pieceRandom.left == EQUAL) {
                     path.close();
-                } else if (left == IN) {
+                } else if (pieceRandom.left == IN) {
                     path.lineTo(offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
                     path.cubicTo(offsetX + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3);
                     path.close();
-                } else if (left == OUT) {
+                } else if (pieceRandom.left == OUT) {
                     path.lineTo(offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
                     path.cubicTo(offsetX - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, offsetX - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3);
                     path.close();
                 }
 
                 PuzzlePiece piece = new PuzzlePiece(getApplicationContext());
-                piece.setImageBitmap(pieceBitmap);
+//                piece.setImageBitmap(pieceBitmap);
                 piece.xCoord = xCoord - offsetX + imageView.getLeft();
                 piece.yCoord = yCoord - offsetY + imageView.getTop();
                 piece.pieceWidth = pieceWidth + offsetX;
                 piece.pieceHeight = pieceHeight + offsetY;
 
-//                if (row == 0) {
-//                    // top side piece
-//                    path.lineTo(pieceBitmap.getWidth(), offsetY);
-//                } else {
-//                    // top bump
-//                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3, offsetY);
-//                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, offsetY);
-//                    path.lineTo(pieceBitmap.getWidth(), offsetY);
-//                }
-//
-//                if (col == cols - 1) {
-//                    // right side piece
-//                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
-//                } else {
-//                    // right bump
-//                    path.lineTo(pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
-//                    path.cubicTo(pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
-//                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
-//                }
-//
-//                if (row == rows - 1) {
-//                    // bottom side piece
-//                    path.lineTo(offsetX, pieceBitmap.getHeight());
-//                } else {
-//                    // bottom bump
-//                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, pieceBitmap.getHeight());
-//                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3, pieceBitmap.getHeight());
-//                    path.lineTo(offsetX, pieceBitmap.getHeight());
-//                }
-//
-//                if (col == 0) {
-//                    // left side piece
-//                    path.close();
-//                } else {
-//                    // left bump
-//                    path.lineTo(offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
-//                    path.cubicTo(offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
-//                    path.close();
-//                }
                 // mask the piece
                 Paint paint = new Paint();
                 paint.setColor(0XFF000000);
@@ -420,11 +377,15 @@ public class PuzzleActivity extends AppCompatActivity {
 
                 pieces.add(piece);
                 xCoord += pieceWidth;
+
             }
             yCoord += pieceHeight;
+            listRandom.add(listPiece);
         }
+
         borderView.addPaths(paths);
         return pieces;
+
     }
 
     private int[] getBitmapPositionInsideImageView(ImageView imageView) {
