@@ -15,10 +15,10 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.View;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
@@ -36,6 +36,9 @@ public class PuzzleActivity extends AppCompatActivity {
     String mCurrentPhotoPath;
     String mCurrentPhotoUri;
     BorderView borderView;
+    private static final int EQUAL = 0;
+    private static final int OUT = 1;
+    private static final int IN = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -118,10 +121,10 @@ public class PuzzleActivity extends AppCompatActivity {
         int rows = 4;
         int cols = 4;
 
-        //Random
+        //Random position
         ArrayList<Integer> randomNumber = new ArrayList<>();
-        randomNumber.add(1);
-        randomNumber.add(-1);
+        randomNumber.add(IN);
+        randomNumber.add(OUT);
         ArrayList<ArrayList<Piece>> listRandom = new ArrayList(rows);
         for (int row = 0; row < rows; row++) {
             ArrayList<Piece> listPiece = new ArrayList<>();
@@ -129,16 +132,16 @@ public class PuzzleActivity extends AppCompatActivity {
                 //Row = 0
                 Piece piece = new Piece();
                 if (row == 0) {
-                    piece.top = 0;
+                    piece.top = EQUAL;
                 }
                 if (row == rows - 1) {
-                    piece.bottom = 0;
+                    piece.bottom = EQUAL;
                 }
                 if (col == 0) {
-                    piece.left = 0;
+                    piece.left = EQUAL;
                 }
                 if (col == cols - 1) {
-                    piece.right = 0;
+                    piece.right = EQUAL;
                 }
                 if (row - 1 >= 0) {
                     piece.top = -listRandom.get(row - 1).get(col).bottom;
@@ -157,11 +160,6 @@ public class PuzzleActivity extends AppCompatActivity {
                 listPiece.add(piece);
             }
             listRandom.add(listPiece);
-        }
-        for (int row = 0; row < rows; row++) {
-            for (int col = 0; col < cols; col++) {
-                Log.d("myLog", "left: " + listRandom.get(row).get(col).left + " top: " + listRandom.get(row).get(col).top + " right: " + listRandom.get(row).get(col).right + " bottom: " + listRandom.get(row).get(col).bottom);
-            }
         }
 
         ImageView imageView = findViewById(R.id.imageView);
@@ -195,21 +193,155 @@ public class PuzzleActivity extends AppCompatActivity {
             int xCoord = 0;
             for (int col = 0; col < cols; col++) {
                 // calculate offset for each piece
-                int offsetX = 0;
-                int offsetY = 0;
+                int offsetX = pieceWidth / 3;
+                int offsetY = pieceHeight / 3;
+//                if (col > 0) {
+//                    offsetX = ;
+//                }
+//                if (row > 0) {
+//                    offsetY = ;
+//                }
+
+                // this bitmap will hold our final puzzle piece image
+                Bitmap puzzlePiece;
+                if (row > 0 && col > 0 && row < rows - 1 && col < cols - 1) {
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX * 2, pieceHeight + offsetY * 2, Bitmap.Config.ARGB_8888);
+                } else {
+                    puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
+                }
+                // draw path
+                float bumpSize = pieceHeight * 1.0f / 2.5f;
+                Canvas canvas = new Canvas(puzzlePiece);
+                Path path = new Path();
+
+                // apply the offset to each piece
+                Bitmap pieceBitmap;
+                int offsetPathX;
+                int offsetPathY;
+                if (row == 0 && col == 0) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord, yCoord, pieceWidth + offsetX, pieceHeight + offsetY);
+                    offsetPathX = xCoord;
+                    offsetPathY = yCoord;
+                    path.moveTo(0, 0);
+                } else if ((row == 0) && (col == cols - 1)) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord, pieceWidth + offsetX, pieceHeight + offsetY);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord;
+                    path.moveTo(offsetX, 0);
+                } else if (row == rows - 1 && col == 0) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
+                    offsetPathX = xCoord;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(0, offsetY);
+                } else if ((row == rows - 1) && (col == cols - 1)) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(offsetX, offsetY);
+                } else if (row == 0) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord, pieceWidth + offsetX * 2, pieceHeight + offsetY);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord;
+                    path.moveTo(offsetX, 0);
+                } else if (col == 0) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY * 2);
+                    offsetPathX = xCoord;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(0, offsetY);
+                } else if (row == rows - 1) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX * 2, pieceHeight + offsetY);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(offsetX, offsetY);
+                } else if (col == cols - 1) {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY * 2);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(offsetX, offsetY);
+                } else {
+                    pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX * 2, pieceHeight + offsetY * 2);
+                    offsetPathX = xCoord - offsetX;
+                    offsetPathY = yCoord - offsetY;
+                    path.moveTo(offsetX, offsetY);
+                }
+//                Log.d("myLog", "x: " + (xCoord - offsetX));
+//                Log.d("myLog", "y: " + (yCoord - offsetY));
+//                Log.d("myLog", "width: " + (pieceWidth + offsetX));
+//                Log.d("myLog", "height: " + (pieceHeight + offsetY));
+
+                int top = listRandom.get(row).get(col).top;
+                int right = listRandom.get(row).get(col).right;
+                int bottom = listRandom.get(row).get(col).bottom;
+                int left = listRandom.get(row).get(col).left;
+                Log.d("myLog", "left: " + listRandom.get(row).get(col).left + " top: " + listRandom.get(row).get(col).top + " right: " + listRandom.get(row).get(col).right + " bottom: " + listRandom.get(row).get(col).bottom);
+
+                int cuttingBitmapWidth = pieceWidth;
+                int cuttingBitmapHeight = pieceHeight;
+                offsetX = 0;
+                offsetY = 0;
                 if (col > 0) {
                     offsetX = pieceWidth / 3;
                 }
                 if (row > 0) {
                     offsetY = pieceHeight / 3;
                 }
+                if (row > 0) {
+                    cuttingBitmapHeight = pieceHeight + offsetY;
+                }
+                if (col > 0) {
+                    cuttingBitmapWidth = pieceWidth + offsetX;
+                }
+                //TOP
+                if (top == EQUAL) {
+                    path.lineTo(cuttingBitmapWidth, 0);
+                } else if (top == IN) {
+                    path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3, offsetY);
+                    path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6, offsetY + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, offsetY + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, offsetY);
+                    path.lineTo(cuttingBitmapWidth, offsetY);
+                } else if (top == OUT) {
+                    path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3, offsetY);
+                    path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6, offsetY - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, offsetY - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, offsetY);
+                    path.lineTo(cuttingBitmapWidth, offsetY);
+                }
 
-                // apply the offset to each piece
-                Bitmap pieceBitmap = Bitmap.createBitmap(croppedBitmap, xCoord - offsetX, yCoord - offsetY, pieceWidth + offsetX, pieceHeight + offsetY);
-//                Log.d("myLog", "x: " + (xCoord - offsetX));
-//                Log.d("myLog", "y: " + (yCoord - offsetY));
-//                Log.d("myLog", "width: " + (pieceWidth + offsetX));
-//                Log.d("myLog", "height: " + (pieceHeight + offsetY));
+                //RIGHT
+                if (right == EQUAL) {
+                    path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
+                } else if (right == IN) {
+                    path.lineTo(cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3);
+                    path.cubicTo(cuttingBitmapWidth - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, cuttingBitmapWidth - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
+                    path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
+                } else if (right == OUT) {
+                    path.lineTo(cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3);
+                    path.cubicTo(cuttingBitmapWidth + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, cuttingBitmapWidth + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, cuttingBitmapWidth, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
+                    path.lineTo(cuttingBitmapWidth, cuttingBitmapHeight);
+                }
+
+                //BOTTOM
+                if (bottom == EQUAL) {
+                    path.lineTo(offsetX, cuttingBitmapHeight);
+                } else if (bottom == IN) {
+                    path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, cuttingBitmapHeight);
+                    path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, cuttingBitmapHeight - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6, cuttingBitmapHeight - bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3, cuttingBitmapHeight);
+                    path.lineTo(offsetX, cuttingBitmapHeight);
+                } else if (bottom == OUT) {
+                    path.lineTo(offsetX + (cuttingBitmapWidth - offsetX) / 3 * 2, cuttingBitmapHeight);
+                    path.cubicTo(offsetX + (cuttingBitmapWidth - offsetX) / 6 * 5, cuttingBitmapHeight + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 6, cuttingBitmapHeight + bumpSize, offsetX + (cuttingBitmapWidth - offsetX) / 3, cuttingBitmapHeight);
+                    path.lineTo(offsetX, cuttingBitmapHeight);
+                }
+                //LEFT
+                if (left == EQUAL) {
+                    path.close();
+                } else if (left == IN) {
+                    path.lineTo(offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
+                    path.cubicTo(offsetX + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3);
+                    path.close();
+                } else if (left == OUT) {
+                    path.lineTo(offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3 * 2);
+                    path.cubicTo(offsetX - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6 * 5, offsetX - bumpSize, offsetY + (cuttingBitmapHeight - offsetY) / 6, offsetX, offsetY + (cuttingBitmapHeight - offsetY) / 3);
+                    path.close();
+                }
+
                 PuzzlePiece piece = new PuzzlePiece(getApplicationContext());
                 piece.setImageBitmap(pieceBitmap);
                 piece.xCoord = xCoord - offsetX + imageView.getLeft();
@@ -217,53 +349,45 @@ public class PuzzleActivity extends AppCompatActivity {
                 piece.pieceWidth = pieceWidth + offsetX;
                 piece.pieceHeight = pieceHeight + offsetY;
 
-                // this bitmap will hold our final puzzle piece image
-                Bitmap puzzlePiece = Bitmap.createBitmap(pieceWidth + offsetX, pieceHeight + offsetY, Bitmap.Config.ARGB_8888);
-
-                // draw path
-                float bumpSize = pieceHeight * 1.0f / 2.5f;
-                Canvas canvas = new Canvas(puzzlePiece);
-                Path path = new Path();
-                path.moveTo(offsetX, offsetY);
-                if (row == 0) {
-                    // top side piece
-                    path.lineTo(pieceBitmap.getWidth(), offsetY);
-                } else {
-                    // top bump
-                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3, offsetY);
-                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, offsetY);
-                    path.lineTo(pieceBitmap.getWidth(), offsetY);
-                }
-
-                if (col == cols - 1) {
-                    // right side piece
-                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
-                } else {
-                    // right bump
-                    path.lineTo(pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
-                    path.cubicTo(pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
-                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
-                }
-
-                if (row == rows - 1) {
-                    // bottom side piece
-                    path.lineTo(offsetX, pieceBitmap.getHeight());
-                } else {
-                    // bottom bump
-                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, pieceBitmap.getHeight());
-                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3, pieceBitmap.getHeight());
-                    path.lineTo(offsetX, pieceBitmap.getHeight());
-                }
-
-                if (col == 0) {
-                    // left side piece
-                    path.close();
-                } else {
-                    // left bump
-                    path.lineTo(offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
-                    path.cubicTo(offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
-                    path.close();
-                }
+//                if (row == 0) {
+//                    // top side piece
+//                    path.lineTo(pieceBitmap.getWidth(), offsetY);
+//                } else {
+//                    // top bump
+//                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3, offsetY);
+//                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, offsetY - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, offsetY);
+//                    path.lineTo(pieceBitmap.getWidth(), offsetY);
+//                }
+//
+//                if (col == cols - 1) {
+//                    // right side piece
+//                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
+//                } else {
+//                    // right bump
+//                    path.lineTo(pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
+//                    path.cubicTo(pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, pieceBitmap.getWidth() + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, pieceBitmap.getWidth(), offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
+//                    path.lineTo(pieceBitmap.getWidth(), pieceBitmap.getHeight());
+//                }
+//
+//                if (row == rows - 1) {
+//                    // bottom side piece
+//                    path.lineTo(offsetX, pieceBitmap.getHeight());
+//                } else {
+//                    // bottom bump
+//                    path.lineTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 3 * 2, pieceBitmap.getHeight());
+//                    path.cubicTo(offsetX + (pieceBitmap.getWidth() - offsetX) / 6 * 5, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 6, pieceBitmap.getHeight() - bumpSize, offsetX + (pieceBitmap.getWidth() - offsetX) / 3, pieceBitmap.getHeight());
+//                    path.lineTo(offsetX, pieceBitmap.getHeight());
+//                }
+//
+//                if (col == 0) {
+//                    // left side piece
+//                    path.close();
+//                } else {
+//                    // left bump
+//                    path.lineTo(offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3 * 2);
+//                    path.cubicTo(offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6 * 5, offsetX + bumpSize, offsetY + (pieceBitmap.getHeight() - offsetY) / 6, offsetX, offsetY + (pieceBitmap.getHeight() - offsetY) / 3);
+//                    path.close();
+//                }
                 // mask the piece
                 Paint paint = new Paint();
                 paint.setColor(0XFF000000);
@@ -273,8 +397,9 @@ public class PuzzleActivity extends AppCompatActivity {
                 paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
                 canvas.drawBitmap(pieceBitmap, 0, 0, paint);
 
-                path.offset(xCoord - offsetX, yCoord - offsetY);
+                path.offset(offsetPathX, offsetPathY);
                 paths.add(path);
+
 
 //                // draw a white border
 //                Paint border = new Paint();
